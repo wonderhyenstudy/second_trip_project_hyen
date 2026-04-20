@@ -23,9 +23,8 @@ public class MemberController {
         return "success";
     }
 
-    // ⭐ 2. 중복 확인 창구 추가! (플러터가 여기로 물어볼 거야)
-    // ⭐ 2. 중복 확인 창구 (경로 부분만 살짝 수정!)
-    @GetMapping("/exists/{email:.+}") // 👈 뒤에 :.+ 를 꼭 붙여줘!
+    // 2. 중복 확인 창구
+    @GetMapping("/exists/{email:.+}")
     public ResponseEntity<Boolean> checkDuplicate(@PathVariable("email") String email) {
         log.info("중복 확인 요청 들어옴! 이메일: " + email);
         boolean exists = memberService.existsByMid(email);
@@ -44,5 +43,16 @@ public class MemberController {
     public MemberDTO login(@RequestBody MemberDTO memberDTO) {
         log.info("로그인 시도 아이디: " + memberDTO.getMid());
         return memberService.login(memberDTO.getMid(), memberDTO.getMpw());
+    }
+
+    // ⭐ 5. 회원 정보 수정 (플러터 EditProfileScreen 연동)
+    @PutMapping("/modify")
+    public ResponseEntity<String> modify(@RequestBody MemberDTO memberDTO) {
+        log.info("회원 정보 수정 요청! 수정 데이터: " + memberDTO);
+
+        // 서비스의 modify 호출 (이름, 전화번호 등 변경 로직)
+        memberService.modify(memberDTO);
+
+        return ResponseEntity.ok("success");
     }
 }

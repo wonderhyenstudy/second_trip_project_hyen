@@ -28,14 +28,13 @@ public class MemberServiceImpl implements MemberService {
     public void register(MemberDTO memberDTO) {
         log.info("회원가입 로직 실행: " + memberDTO);
 
-        // 비밀번호 암호화해서 저장해야 해!
         Member member = Member.builder()
                 .mid(memberDTO.getMid())
-                .mpw(passwordEncoder.encode(memberDTO.getMpw())) // 암호화 슥삭
+                .mpw(passwordEncoder.encode(memberDTO.getMpw()))
                 .mname(memberDTO.getMname())
                 .email(memberDTO.getEmail())
                 .phone(memberDTO.getPhone())
-                .role(MemberRole.USER) // 기본 권한은 USER로!
+                .role(MemberRole.USER)
                 .build();
 
         memberRepository.save(member);
@@ -48,15 +47,27 @@ public class MemberServiceImpl implements MemberService {
         return entityToDTO(member);
     }
 
+    // ⭐ 회원 정보 수정 로직 구현 완료!
     @Override
     public void modify(MemberDTO memberDTO) {
-        // 수정 로직 필요시 구현
+        log.info("회원 정보 수정 로직 실행: " + memberDTO);
+
+        // 1. DB에서 기존 회원 데이터를 찾아옴
+        Optional<Member> result = memberRepository.findByMid(memberDTO.getMid());
+        Member member = result.orElseThrow(() -> new RuntimeException("해당 회원을 찾을 수 없습니다."));
+
+        // 2. 엔티티의 비즈니스 메서드를 호출해서 값 변경
+        // 플러터에서 보내온 이름과 전화번호로 업데이트!
+        member.changeMname(memberDTO.getMname());
+        member.changePhone(memberDTO.getPhone());
+
+        // 3. @Transactional 덕분에 따로 save를 안 해도 메서드가 끝날 때 DB에 반영돼!
+        // 하지만 명시적으로 확인하고 싶다면 아래를 써도 무방해.
+        memberRepository.save(member);
     }
 
     @Override
     public void remove(String mid) {
-        // mid가 String이니까 deleteById 대신 직접 찾아서 지우거나,
-        // 리포지토리에 만든 mid용 삭제 메소드를 써야 해!
         Optional<Member> member = memberRepository.findByMid(mid);
         member.ifPresent(memberRepository::delete);
     }
@@ -72,7 +83,6 @@ public class MemberServiceImpl implements MemberService {
 
         MemberDTO memberDTO = entityToDTO(member);
 
-        // 토큰 발행 (팀원분 코드 방식에 맞춰서 조절해!)
         String token = jwtUtil.generateToken(Map.of("mid", mid), 1);
         memberDTO.setAccessToken(token);
 
@@ -88,14 +98,12 @@ public class MemberServiceImpl implements MemberService {
     public boolean existsByMid(String mid) {
         if (mid == null || mid.isBlank()) return false;
         log.info("DB에서 중복 체크 중 (공백제거): " + mid.trim());
-
-        // 리포지토리에 새로 만든 통합 쿼리를 호출!
         return memberRepository.existsByMid(mid.trim());
     }
 
     @Override
     public Optional<Member> findByEmail(String email) {
-        return memberRepository.findByMid(email); // mid가 이메일이니까!
+        return memberRepository.findByMid(email);
     }
 
     private MemberDTO entityToDTO(Member member) {

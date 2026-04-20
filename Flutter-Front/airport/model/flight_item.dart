@@ -1,15 +1,16 @@
 class FlightItem {
-  // ── 1. 데이터 구조 정의 ──────────────────────────────────
-  final String? airlineNm;      // 항공사명
-  final String? flightNo;      // 항공편명 (예: KE1234) vihicleId
-  final String? depAirportNm;   // 출발 공항명
-  final String? arrAirportNm;   // 도착 공항명
-  final String? depAirportId;   // 출발 공항코드
-  final String? arrAirportId;   // 도착 공항코드
-  final String? depPlandTime;   // 출발 예정시각
-  final String? arrPlandTime;   // 도착 예정시각
-  final int price;              // 가격
-  final int seatsLeft;          // 잔여석
+
+  // ── 1. 데이터 구조 ──────────────────────────────────────
+  final String? airlineNm;     // 항공사명
+  final String? flightNo;      // 항공편명 (예: KE1234)
+  final String? depAirportNm;  // 출발 공항명
+  final String? arrAirportNm;  // 도착 공항명
+  final String? depAirportId;  // 출발 공항코드
+  final String? arrAirportId;  // 도착 공항코드
+  final String? depPlandTime;  // 출발 예정시각 (예: 20260421060000)
+  final String? arrPlandTime;  // 도착 예정시각
+  final int price;             // 가격 (economyCharge)
+  final int seatsLeft;         // 잔여석
 
   FlightItem({
     this.airlineNm,
@@ -24,62 +25,24 @@ class FlightItem {
     required this.seatsLeft,
   });
 
-  // ── 2. API JSON → FlightItem 변환 ───────────────────────
-  // ✅ [변경 전] TAGO API 필드명
-  // factory FlightItem.fromJson(Map<String, dynamic> json) {
-  //   return FlightItem(
-  //     airlineNm:    json['airlineNm'],
-  //     vihicleId:    json['vihicleId'],    // TAGO 필드명
-  //     depAirportNm: json['depAirportNm'],
-  //     arrAirportNm: json['arrAirportNm'],
-  //     depAirportId: json['depAirportId'],
-  //     arrAirportId: json['arrAirportId'],
-  //     depPlandTime: json['depPlandTime']?.toString(),
-  //     arrPlandTime: json['arrPlandTime']?.toString(),
-  //     price:        _mockPrice(),          // Mock 가격
-  //     seatsLeft:    _mockSeats(),          // Mock 잔여석
-  //   );
-  // }
-  // ✅ [변경 후] 스프링부트 API 필드명
+  // ── 2. JSON → FlightItem 변환 ───────────────────────────
+  // 스프링부트 API 응답 기준 (TAGO API → DB 저장 후 제공)
   factory FlightItem.fromJson(Map<String, dynamic> json) {
     return FlightItem(
       airlineNm:    json['airlineNm'],
-      flightNo:    json['flightNo'],           // ✅ flightNo 로 변경
+      flightNo:     json['flightNo'],
       depAirportNm: json['depAirportNm'],
       arrAirportNm: json['arrAirportNm'],
       depAirportId: json['depAirportId'],
       arrAirportId: json['arrAirportId'],
       depPlandTime: json['depPlandTime']?.toString(),
       arrPlandTime: json['arrPlandTime']?.toString(),
-      price:        json['economyCharge'] ?? 0, // ✅ 실제 DB 가격
-      seatsLeft:    json['seatsLeft'] ?? 0,     // ✅ 실제 DB 잔여석
+      price:        json['economyCharge'] ?? 0,
+      seatsLeft:    json['seatsLeft'] ?? 0,
     );
   }
 
-  // ── 3. Mock 데이터 (주석처리 - 스프링부트 연결 후 불필요) ──
-  // ✅ [변경 전] Mock 가격/잔여석
-  // static int _mockPrice() {
-  //   final prices = [59000, 79000, 89000, 109000, 139000, 189000];
-  //   prices.shuffle();
-  //   return prices.first;
-  // }
-  // static int _mockSeats() => (5 + DateTime.now().millisecond % 45);
-
-  // ── 4. 공항코드 상수 ─────────────────────────────────────
-  // ✅ [변경 전] TAGO API 공항코드
-  // static const Map<String, String> airportCodes = {
-  //   'NAARKNW' : '김포',
-  //   'NAARKPK' : '김해(부산)',
-  //   'NAARKPC' : '제주',
-  //   'NAARKDG' : '대구',
-  //   'NAARKTU' : '청주',
-  //   'NAARKJJ' : '광주',
-  //   'NAARKRW' : '여수',
-  //   'NAARKPH' : '포항',
-  //   'NAARKUL' : '울산',
-  //   'NAARKSB' : '사천',
-  // };
-  // ✅ [변경 후] 스프링부트 DB 공항코드
+  // ── 3. 공항코드 상수 (스프링부트 DB 기준) ────────────────
   static const Map<String, String> airportCodes = {
     'GIMPO'   : '김포',
     'GIMHAE'  : '김해(부산)',
@@ -93,8 +56,21 @@ class FlightItem {
     'SACHEON' : '사천',
   };
 
-  // ── 5. 공항코드 → 공항명 변환 ───────────────────────────
+  // ── 4. 공항코드 → 공항명 변환 ───────────────────────────
   static String getAirportName(String? code) {
     return airportCodes[code] ?? code ?? '-';
   }
 }
+
+// =============================================================================
+// [파일 정보]
+// 위치  : lib/airport/model/flight_item.dart
+// 역할  : 항공편 데이터 모델 (API 응답 → Flutter 객체 변환)
+// 사용처 : FlightController, FlightListScreen, FlightDetailScreen
+// -----------------------------------------------------------------------------
+// [변경 이력]
+// - 최초 작성 : TAGO API 기준 fromJson, Mock 가격/잔여석
+// - 변경       : 스프링부트 DB API 기준으로 전환
+//               vihicleId → flightNo, Mock → 실제 DB 데이터 사용
+//               TAGO 공항코드 → 영문 공항코드 (GIMHAE, JEJU 등)
+// =============================================================================

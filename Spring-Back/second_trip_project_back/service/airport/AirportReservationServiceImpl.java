@@ -4,6 +4,7 @@ import com.busanit401.second_trip_project_back.dto.airport.AirportPassengerDTO;
 import com.busanit401.second_trip_project_back.dto.airport.AirportReservationDTO;
 import com.busanit401.second_trip_project_back.entity.airport.AirportPassenger;
 import com.busanit401.second_trip_project_back.entity.airport.AirportReservation;
+import com.busanit401.second_trip_project_back.repository.airport.AirportFlightRepository;
 import com.busanit401.second_trip_project_back.repository.airport.AirportReservationRepository;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 public class AirportReservationServiceImpl implements AirportReservationService {
 
     private final AirportReservationRepository airportReservationRepository;
+    private final AirportFlightRepository airportFlightRepository;
 
     // ── 예약 등록 ─────────────────────────────────────────────
     @Override
@@ -70,6 +72,56 @@ public class AirportReservationServiceImpl implements AirportReservationService 
             airportReservationRepository.save(saved);
             log.info("✅ [AirportReservationService] 탑승객 {}명 저장 완료",
                     dto.getPassengers().size());
+        }
+
+        // ✅ 디버그: 조회 조건 확인
+        log.info("✅ [AirportReservationService] 잔여석 차감 시도 → " +
+                        "depAirportId: {} / arrAirportId: {} / depPlandTime앞8자리: {}",
+                dto.getDepAirportId(),
+                dto.getArrAirportId(),
+                dto.getDepPlandTime() != null ? dto.getDepPlandTime().substring(0, 8) : "NULL");
+
+
+        // ✅ 3단계: 잔여 좌석 차감 (탑승객 수만큼)
+        int passengerCount = dto.getPassengers() != null
+                ? dto.getPassengers().size() : 1;
+
+        // 가는편 좌석 차감
+        airportFlightRepository
+                .findByDepAirportIdAndArrAirportIdAndDepPlandTimeStartingWith(
+                        dto.getDepAirportId(),
+                        dto.getArrAirportId(),
+                        dto.getDepPlandTime().substring(0, 8)
+                )
+                .stream()
+                .filter(f -> f.getFlightNo().equals(dto.getFlightNo()))
+                .findFirst()
+                .ifPresent(flight -> {
+                    int updated = Math.max(0, flight.getSeatsLeft() - passengerCount);
+                    flight.setSeatsLeft(updated);
+                    airportFlightRepository.save(flight);
+                    log.info("✅ [AirportReservationService] 가는편 잔여석 차감 → {} → {}석",
+                            dto.getFlightNo(), updated);
+                });
+
+        // 왕복이면 오는편도 차감
+        if (dto.getRetFlightNo() != null && dto.getRetDepPlandTime() != null) {
+            airportFlightRepository
+                    .findByDepAirportIdAndArrAirportIdAndDepPlandTimeStartingWith(
+                            dto.getArrAirportId(),
+                            dto.getDepAirportId(),
+                            dto.getRetDepPlandTime().substring(0, 8)
+                    )
+                    .stream()
+                    .filter(f -> f.getFlightNo().equals(dto.getRetFlightNo()))
+                    .findFirst()
+                    .ifPresent(flight -> {
+                        int updated = Math.max(0, flight.getSeatsLeft() - passengerCount);
+                        flight.setSeatsLeft(updated);
+                        airportFlightRepository.save(flight);
+                        log.info("✅ [AirportReservationService] 오는편 잔여석 차감 → {} → {}석",
+                                dto.getRetFlightNo(), updated);
+                    });
         }
 
         log.info("✅ [AirportReservationService] 예약 등록 완료 → id: {}",

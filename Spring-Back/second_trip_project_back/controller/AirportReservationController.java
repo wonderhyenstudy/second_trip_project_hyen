@@ -30,6 +30,8 @@ public class AirportReservationController {
 
         log.info("✅ [AirportReservationController] 예약 등록 → mid: {}",
                 dto.getMid());
+        log.info("✅ [AirportReservationController] depAirportId: {} / arrAirportId: {} / depPlandTime: {}",
+                dto.getDepAirportId(), dto.getArrAirportId(), dto.getDepPlandTime());
 
         try {
             Long id = airportReservationService.register(dto);
